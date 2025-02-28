@@ -1,54 +1,69 @@
+import requests
 import json
-import subprocess
+import matplotlib.pyplot as plt
 
-# Run the PowerShell command to fetch LeetCode stats
-command = """
-$session = "<your_session_token>"
-$csrftoken = "<your_csrf_token>"
+USERNAME = "SELFANUJ"
+GRAPHQL_URL = "https://leetcode.com/graphql"
 
-$headers = @{
-    "Content-Type" = "application/json"
-    "Cookie" = "LEETCODE_SESSION=$session; csrftoken=$csrftoken"
-    "Referer" = "https://leetcode.com"
-    "X-CSRFToken" = $csrftoken
+HEADERS = {
+    "Content-Type": "application/json",
+    "Referer": "https://leetcode.com"
 }
 
-$query = @"
+QUERY = """
 {
-    "query": "query { matchedUser(username: \\"SELFANUJ\\") { submitStats { acSubmissionNum { difficulty count } } } }"
+    matchedUser(username: "%s") {
+        submitStats {
+            acSubmissionNum {
+                difficulty
+                count
+            }
+        }
+    }
 }
-"@
+""" % USERNAME
 
-$response = Invoke-RestMethod -Uri "https://leetcode.com/graphql" -Method Post -Headers $headers -Body $query
-$response | ConvertTo-Json -Depth 10
-"""
+def fetch_leetcode_stats():
+    response = requests.post(GRAPHQL_URL, json={"query": QUERY}, headers=HEADERS)
+    data = response.json()
+    return data["data"]["matchedUser"]["submitStats"]["acSubmissionNum"]
 
-# Execute the command in PowerShell and get output
-output = subprocess.run(["powershell", "-Command", command], capture_output=True, text=True)
+def generate_graph(stats):
+    difficulties = ["Easy", "Medium", "Hard"]
+    counts = [stats[1]["count"], stats[2]["count"], stats[3]["count"]]
 
-# Extract JSON output
-try:
-    leetcode_data = json.loads(output.stdout)
-    submission_stats = leetcode_data["data"]["matchedUser"]["submitStats"]["acSubmissionNum"]
-except Exception as e:
-    print("Error parsing LeetCode response:", e)
-    exit(1)
+    plt.figure(figsize=(6, 4))
+    plt.bar(difficulties, counts, color=["green", "orange", "red"])
+    plt.xlabel("Difficulty")
+    plt.ylabel("Problems Solved")
+    plt.title(f"LeetCode Progress of {USERNAME}")
+    plt.savefig("leetcode_graph.png")  # Save image
+    print("✅ LeetCode graph saved as 'leetcode_graph.png'")
 
-# Create a new README content
-readme_content = f"""
-# LeetCode Solutions by SELFANUJ 🚀
+def update_readme(stats):
+    readme_content = f"""
+# 🚀 LeetCode Progress of {USERNAME}
 
-## 📊 LeetCode Progress
+![LeetCode Graph](leetcode_graph.png)
+
+**Total Solved:** {stats[0]["count"]}  
+- 🟢 Easy: {stats[1]["count"]}
+- 🟠 Medium: {stats[2]["count"]}
+- 🔴 Hard: {stats[3]["count"]}
 
 | Difficulty | Problems Solved |
 |------------|----------------|
+| 🟢 Easy   | {stats[1]["count"]} |
+| 🟠 Medium | {stats[2]["count"]} |
+| 🔴 Hard   | {stats[3]["count"]} |
+
+🔥 Updated daily with **GitHub Actions**!  
 """
+    with open("README.md", "w", encoding="utf-8") as f:
+        f.write(readme_content)
 
-for stat in submission_stats:
-    readme_content += f"| {stat['difficulty']} | {stat['count']} |\n"
-
-# Write to README.md
-with open("README.md", "w", encoding="utf-8") as file:
-    file.write(readme_content)
-
-print("✅ README.md updated successfully!")
+if __name__ == "__main__":
+    stats = fetch_leetcode_stats()
+    generate_graph(stats)
+    update_readme(stats)
+    print("✅ README.md updated successfully!")

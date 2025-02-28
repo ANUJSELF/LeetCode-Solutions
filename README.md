@@ -1,11 +1,17 @@
 
-# LeetCode Solutions by SELFANUJ 🚀
+# 🚀 LeetCode Progress of SELFANUJ
 
-## 📊 LeetCode Progress
+![LeetCode Graph](leetcode_graph.png)
+
+**Total Solved:** 403  
+- 🟢 Easy: 120
+- 🟠 Medium: 201
+- 🔴 Hard: 82
 
 | Difficulty | Problems Solved |
 |------------|----------------|
-| All | 403 |
-| Easy | 120 |
-| Medium | 201 |
-| Hard | 82 |
+| 🟢 Easy   | 120 |
+| 🟠 Medium | 201 |
+| 🔴 Hard   | 82 |
+
+🔥 Updated daily with **GitHub Actions**!  
