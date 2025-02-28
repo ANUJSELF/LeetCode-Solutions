@@ -1,46 +1,54 @@
-import requests
 import json
-import os
+import subprocess
 
-USERNAME = "SELFANUJ"
-URL = f"https://leetcode.com/{USERNAME}"
+# Run the PowerShell command to fetch LeetCode stats
+command = """
+$session = "<your_session_token>"
+$csrftoken = "<your_csrf_token>"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
+$headers = @{
+    "Content-Type" = "application/json"
+    "Cookie" = "LEETCODE_SESSION=$session; csrftoken=$csrftoken"
+    "Referer" = "https://leetcode.com"
+    "X-CSRFToken" = $csrftoken
 }
 
-# Scrape solved problems from profile
-response = requests.get(URL, headers=headers)
-if response.status_code == 200:
-    data = response.text
-    solved_problems = set()
-    
-    start_idx = data.find('var pageData = ') + len('var pageData = ')
-    end_idx = data.find('};', start_idx) + 1
-    json_data = json.loads(data[start_idx:end_idx])
+$query = @"
+{
+    "query": "query { matchedUser(username: \\"SELFANUJ\\") { submitStats { acSubmissionNum { difficulty count } } } }"
+}
+"@
 
-    if "submissionList" in json_data:
-        for problem in json_data["submissionList"]:
-            solved_problems.add(problem["title"])
+$response = Invoke-RestMethod -Uri "https://leetcode.com/graphql" -Method Post -Headers $headers -Body $query
+$response | ConvertTo-Json -Depth 10
+"""
 
-    print("\n✅ Solved Problems List:")
-    for problem in sorted(solved_problems):
-        print(f"🔹 {problem}")
+# Execute the command in PowerShell and get output
+output = subprocess.run(["powershell", "-Command", command], capture_output=True, text=True)
 
-    # Update README.md
-    with open("README.md", "w", encoding="utf-8") as file:
-        file.write("# 🏆 LeetCode Solutions\n\n")
-        file.write(f"✅ **Total Solved:** {len(solved_problems)} problems\n\n")
-        file.write("## 🔹 Solved Problems\n")
-        for problem in sorted(solved_problems):
-            file.write(f"- {problem}\n")
+# Extract JSON output
+try:
+    leetcode_data = json.loads(output.stdout)
+    submission_stats = leetcode_data["data"]["matchedUser"]["submitStats"]["acSubmissionNum"]
+except Exception as e:
+    print("Error parsing LeetCode response:", e)
+    exit(1)
 
-    print("\n✅ README.md updated successfully!")
+# Create a new README content
+readme_content = f"""
+# LeetCode Solutions by SELFANUJ 🚀
 
-    # Commit & Push to GitHub
-    os.system("git add README.md")
-    os.system('git commit -m "Updated LeetCode Solutions"')
-    os.system("git push origin main")
+## 📊 LeetCode Progress
 
-else:
-    print("⚠️ Failed to fetch solved problems. Check if your profile is public.")
+| Difficulty | Problems Solved |
+|------------|----------------|
+"""
+
+for stat in submission_stats:
+    readme_content += f"| {stat['difficulty']} | {stat['count']} |\n"
+
+# Write to README.md
+with open("README.md", "w", encoding="utf-8") as file:
+    file.write(readme_content)
+
+print("✅ README.md updated successfully!")
